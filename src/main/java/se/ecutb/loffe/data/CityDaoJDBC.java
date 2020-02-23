@@ -51,12 +51,6 @@ public class CityDaoJDBC implements CityDao {
         return connection.prepareStatement(FIND_ALL);
     }
 
-    private PreparedStatement create_delete(Connection connection, City city) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(DELETE);
-        statement.setInt(1, city.getCityId());
-        return statement;
-    }
-
     private City createCityFromResultSet(ResultSet resultSet) throws SQLException {
         return new City(
                 resultSet.getInt(1),
@@ -140,36 +134,45 @@ public class CityDaoJDBC implements CityDao {
 
     @Override
     public City add(City city) {
+        try {
+            int nullCheck = city.hashCode();
+        } catch (Exception e) {
+            System.out.println("ADD CITY: City does not exist!");
+            return city;
+        }
+
         Connection connection = null;
-        PreparedStatement preparedStatement = null;
+        PreparedStatement statement = null;
         ResultSet resultSet = null;
+
         try {
             connection = Database.getConnection();
-            preparedStatement = connection.prepareStatement(ADD, Statement.RETURN_GENERATED_KEYS);
-            preparedStatement.setString(1, city.getName());
-            preparedStatement.setString(2, city.getCode());
-            preparedStatement.setString(3, city.getDistrict());
-            preparedStatement.setInt(4, city.getPopulation());
-            preparedStatement.execute();
-            resultSet = preparedStatement.getGeneratedKeys();
+            statement = connection.prepareStatement(ADD, Statement.RETURN_GENERATED_KEYS);
+            statement.setString(1, city.getName());
+            statement.setString(2, city.getCode().toUpperCase());
+            statement.setString(3, city.getDistrict());
+            statement.setInt(4, city.getPopulation());
+            statement.execute();
+            resultSet = statement.getGeneratedKeys();
+
             while (resultSet.next()) {
                 city = new City(
                         resultSet.getInt(1),
                         city.getName(),
-                        city.getCode(),
+                        city.getCode().toUpperCase(),
                         city.getDistrict(),
                         city.getPopulation()
                 );
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
                 if (resultSet != null) {
                     resultSet.close();
                 }
-                if (preparedStatement != null) {
-                    preparedStatement.close();
+                if (statement != null) {
+                    statement.close();
                 }
                 if (connection != null) {
                     connection.close();
@@ -199,14 +202,13 @@ public class CityDaoJDBC implements CityDao {
             statement.setString(3, city.getDistrict());
             statement.setInt(4, city.getPopulation());
             statement.setInt(5, city.getCityId());
-            statement.executeUpdate();
+            statement.execute();
         }
         catch(SQLException e){
             e.printStackTrace();
         }
             return city;
     }
-
 
     @Override
     public int delete(City city) {
@@ -216,11 +218,13 @@ public class CityDaoJDBC implements CityDao {
             System.out.println("DELETE CITY: City does not exist!");
             return 0;
         }
+
         int numberOfDeleted = 0;
         try (
                 Connection connection = Database.getConnection();
-                PreparedStatement statement = create_delete(connection, city);
+                PreparedStatement statement = connection.prepareStatement(DELETE)
         ) {
+            statement.setInt(1, city.getCityId());
             numberOfDeleted = statement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

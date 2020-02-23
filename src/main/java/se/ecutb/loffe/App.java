@@ -10,6 +10,6 @@ public class App
     public static void main( String[] args ) throws SQLException {
         Database.getConnection();
         CityDaoJDBC cityDao = new CityDaoJDBC();
-        
+
     }
 }
